@@ -65,83 +65,74 @@ impl BowlingGame {
         }
     }
 
-    pub fn next_frame(&mut self) {
-        if self.curr_frame < 9 {
-            self.curr_frame += 1;
-        }
-    }
-
     pub fn roll(&mut self, pins: u16) -> Result<(), Error> {
+        // if the game is over do not accept new rolls
+        if self.complete {
+            return Err(Error::GameComplete);
+        }
+
         // You cannot knock down more pins than are setup
         if pins > PINS {
             return Err(Error::NotEnoughPinsLeft);
         }
 
-        let curr_roll = self.frames[self.curr_frame].curr_roll;
-        if curr_roll == 2 {
-            self.next_frame();
-        }
-
         // Our frames array is 0-indexed
         let frame = &mut self.frames[self.curr_frame];
-        let is_final_frame = frame.is_final;
-        let bonus_roll = frame.bonus_roll;
 
         // Roll the ball towards the pins!
         frame.curr_roll += 1;
 
-        println!(
-            "Frame: {}, Current Roll: {}",
-            self.curr_frame, frame.curr_roll,
-        );
+        // We cannot knock down more than 10 pins
+        if pins > frame.pins_left {
+            return Err(Error::NotEnoughPinsLeft);
+        }
 
-        // Strike
-        if pins == 10 && frame.curr_roll == 1 {
+        // Strikes occur on the first roll of any frame or any roll
+        // in the final frame.
+        if pins == PINS && (frame.curr_roll == 1 || frame.is_final) {
             self.rolls.push(Roll {
-                in_final_frame: is_final_frame,
+                in_final_frame: frame.is_final,
                 is_strike: true,
                 is_spare: false,
-                score: 10,
+                score: PINS,
             });
 
-            if is_final_frame {
+            if frame.is_final {
                 frame.bonus_roll = true;
-                frame.pins_left = 10;
+                frame.pins_left = PINS;
             } else {
                 frame.pins_left = 0;
+                self.curr_frame += 1;
             }
-
-            // With a strike advance to the next frame right away
-            self.next_frame();
         } else {
-            // We cannot knock down more than 10 pins
-            if pins > frame.pins_left {
-                println!("Not enough pins left...");
-                return Err(Error::NotEnoughPinsLeft);
-            }
-
             // if there are no pins left this has to be a spare
             frame.pins_left -= pins;
             let is_spare = frame.pins_left == 0;
-            if is_spare && is_final_frame {
+
+            if is_spare && frame.is_final {
                 frame.bonus_roll = true;
-                frame.pins_left = 10;
+                frame.pins_left = PINS;
             }
 
             self.rolls.push(Roll {
-                in_final_frame: is_final_frame,
+                in_final_frame: frame.is_final,
                 is_strike: false,
                 is_spare,
                 score: pins,
             });
+
+            if !frame.is_final && frame.curr_roll == 2 {
+                self.curr_frame += 1;
+            }
         }
 
-        if is_final_frame && ((curr_roll >= 3 && bonus_roll) || (curr_roll == 2)) {
+        if frame.is_final
+            && ((frame.curr_roll == 3 && frame.bonus_roll)
+                || (frame.curr_roll == 2 && !frame.bonus_roll))
+        {
             self.complete = true;
-            Err(Error::GameComplete)
-        } else {
-            Ok(())
         }
+        Ok(())
     }
 
     pub fn score(&self) -> Option<u16> {
