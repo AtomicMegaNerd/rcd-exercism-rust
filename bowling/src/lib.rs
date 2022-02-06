@@ -71,21 +71,15 @@ impl BowlingGame {
             return Err(Error::GameComplete);
         }
 
-        // You cannot knock down more pins than are setup
-        if pins > PINS {
-            return Err(Error::NotEnoughPinsLeft);
-        }
-
         // Our frames array is 0-indexed
         let frame = &mut self.frames[self.curr_frame];
 
-        // Roll the ball towards the pins!
-        frame.curr_roll += 1;
-
-        // We cannot knock down more than 10 pins
-        if pins > frame.pins_left {
+        if pins > PINS || pins > frame.pins_left {
             return Err(Error::NotEnoughPinsLeft);
         }
+
+        // Roll the ball towards the pins!
+        frame.curr_roll += 1;
 
         // Strikes occur on the first roll of any frame or any roll
         // in the final frame.
