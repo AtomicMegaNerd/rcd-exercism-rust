@@ -32,7 +32,7 @@ impl Frame {
         Frame {
             is_final,
             bonus_roll: false,
-            pins_left: 10,
+            pins_left: PINS,
             curr_roll: 0,
         }
     }
