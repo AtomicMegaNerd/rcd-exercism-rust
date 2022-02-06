@@ -8,25 +8,30 @@ const PINS: u16 = 10;
 
 pub struct BowlingGame {
     frames: [Frame; 10],
+    rolls: Vec<Roll>,
     curr_frame: usize,
+    complete: bool,
 }
 
 pub struct Frame {
-    rolls: Vec<Roll>,
+    is_final: bool,
+    bonus_roll: bool,
     curr_roll: usize,
     pins_left: u16,
 }
 
 pub struct Roll {
+    in_final_frame: bool,
     is_strike: bool,
     is_spare: bool,
     score: u16,
 }
 
 impl Frame {
-    fn new() -> Self {
+    fn new(is_final: bool) -> Self {
         Frame {
-            rolls: Vec::new(),
+            is_final,
+            bonus_roll: false,
             pins_left: 10,
             curr_roll: 0,
         }
@@ -42,19 +47,21 @@ impl Default for BowlingGame {
 impl BowlingGame {
     pub fn new() -> Self {
         BowlingGame {
+            rolls: Vec::new(),
             frames: [
-                Frame::new(),
-                Frame::new(),
-                Frame::new(),
-                Frame::new(),
-                Frame::new(),
-                Frame::new(),
-                Frame::new(),
-                Frame::new(),
-                Frame::new(),
-                Frame::new(),
+                Frame::new(false),
+                Frame::new(false),
+                Frame::new(false),
+                Frame::new(false),
+                Frame::new(false),
+                Frame::new(false),
+                Frame::new(false),
+                Frame::new(false),
+                Frame::new(false),
+                Frame::new(true),
             ],
             curr_frame: 0,
+            complete: false,
         }
     }
 
@@ -77,38 +84,60 @@ impl BowlingGame {
 
         // Our frames array is 0-indexed
         let frame = &mut self.frames[self.curr_frame];
+        let is_final_frame = frame.is_final;
+        let bonus_roll = frame.bonus_roll;
 
         // Roll the ball towards the pins!
         frame.curr_roll += 1;
 
+        println!(
+            "Frame: {}, Current Roll: {}",
+            self.curr_frame, frame.curr_roll,
+        );
+
         // Strike
         if pins == 10 && frame.curr_roll == 1 {
-            println!("Strike in frame {}", self.curr_frame);
-            frame.rolls.push(Roll {
+            self.rolls.push(Roll {
+                in_final_frame: is_final_frame,
                 is_strike: true,
                 is_spare: false,
                 score: 10,
             });
-            frame.pins_left = 0;
+
+            if is_final_frame {
+                frame.bonus_roll = true;
+                frame.pins_left = 10;
+            } else {
+                frame.pins_left = 0;
+            }
+
             // With a strike advance to the next frame right away
             self.next_frame();
         } else {
             // We cannot knock down more than 10 pins
             if pins > frame.pins_left {
+                println!("Not enough pins left...");
                 return Err(Error::NotEnoughPinsLeft);
             }
+
             // if there are no pins left this has to be a spare
             frame.pins_left -= pins;
             let is_spare = frame.pins_left == 0;
+            if is_spare && is_final_frame {
+                frame.bonus_roll = true;
+                frame.pins_left = 10;
+            }
 
-            frame.rolls.push(Roll {
+            self.rolls.push(Roll {
+                in_final_frame: is_final_frame,
                 is_strike: false,
                 is_spare,
                 score: pins,
             });
         }
 
-        if self.curr_frame == 9 && curr_roll == 2 {
+        if is_final_frame && ((curr_roll >= 3 && bonus_roll) || (curr_roll == 2)) {
+            self.complete = true;
             Err(Error::GameComplete)
         } else {
             Ok(())
@@ -116,34 +145,34 @@ impl BowlingGame {
     }
 
     pub fn score(&self) -> Option<u16> {
-        if self.curr_frame >= 9 {
+        if self.complete {
             let mut score = 0;
-            let mut strike_bonus = 0;
-            let mut spare_bonus = 0;
 
-            for frame in &self.frames {
-                for roll in &frame.rolls {
-                    println!("Roll score before bonuses {}", roll.score);
-                    println!("Strike bonus = {}", strike_bonus);
+            // First count all of the rolls not in the final frame.
+            // These can have bonuses.
+            for roll_window in self.rolls.windows(3) {
+                let cur = &roll_window[0];
+                let next = &roll_window[1];
+                let aft = &roll_window[2];
 
-                    if strike_bonus > 0 {
-                        score += roll.score * 2;
-                        strike_bonus -= 1;
-                    } else if spare_bonus > 0 {
-                        score += roll.score * 2;
-                        spare_bonus -= 1;
+                if !cur.in_final_frame {
+                    if cur.is_strike {
+                        score += cur.score + next.score + aft.score;
+                    } else if cur.is_spare {
+                        score += cur.score + next.score
                     } else {
-                        score += roll.score;
-                    }
-                    println!("Score after bonus {}", score);
-
-                    if roll.is_strike {
-                        strike_bonus += 2;
-                    } else if roll.is_spare {
-                        spare_bonus += 1;
+                        score += cur.score;
                     }
                 }
             }
+
+            // This will add up the score from the final frame
+            score += self
+                .rolls
+                .iter()
+                .filter(|r| r.in_final_frame)
+                .fold(0, |acc, r| acc + r.score);
+
             Some(score)
         } else {
             None
