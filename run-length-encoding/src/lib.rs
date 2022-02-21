@@ -1,6 +1,3 @@
-extern crate regex;
-use regex::Regex;
-
 #[derive(Debug, Copy, Clone)]
 struct Cluster {
     ch: char,
@@ -8,11 +5,7 @@ struct Cluster {
 }
 
 impl Cluster {
-    fn new(ch: char) -> Self {
-        Cluster { ch, count: 1 }
-    }
-
-    fn new_with_count(ch: char, count: usize) -> Self {
+    fn new(ch: char, count: usize) -> Self {
         Cluster { ch, count }
     }
 
@@ -42,14 +35,14 @@ pub fn encode(source: &str) -> String {
     let mut clusters = Vec::<Cluster>::new();
 
     // Initialize the current_cluster to the first char in the source string
-    let mut current_cluster: Cluster = Cluster::new(source.chars().next().unwrap());
+    let mut current_cluster: Cluster = Cluster::new(source.chars().next().unwrap(), 1);
 
     // Skip the first character as we already have captured it into the initial cluster
     // above.
     for (ix, ch) in source.chars().skip(1).enumerate() {
         if ch != current_cluster.ch {
             clusters.push(current_cluster);
-            current_cluster = Cluster::new(ch);
+            current_cluster = Cluster::new(ch, 1);
         } else {
             current_cluster.increment();
         }
@@ -73,23 +66,23 @@ pub fn decode(source: &str) -> String {
     }
 
     let mut clusters = Vec::<Cluster>::new();
+    // Split the string by "clusters" which may have a number and/or a letter or whitespace
+    let cluster_str_vec =
+        source.split_inclusive(|ch| char::is_alphabetic(ch) || char::is_whitespace(ch));
 
-    let re = Regex::new(r"(?P<count>\d+)(?P<ch>[[:alpha:]]|\s+)|(?P<ch2>[[:alpha:]]|\s+)").unwrap();
-
-    for cap in re.captures_iter(source) {
-        let has_num = cap.name("count");
-
-        let cluster = match has_num {
-            // If there is a number we also know that capture group ch will match
-            Some(c) => Cluster::new_with_count(
-                cap.name("ch").unwrap().as_str().chars().next().unwrap(),
-                c.as_str().parse::<usize>().unwrap(),
-            ),
-            // If this is a single letter without a number we know ch2 should match
-            None => Cluster::new(cap.name("ch2").unwrap().as_str().chars().next().unwrap()),
+    for cluster_str in cluster_str_vec {
+        // First see if there is a number
+        let count = cluster_str
+            .chars()
+            .filter(|ch| ch.is_digit(10))
+            .collect::<String>()
+            .parse::<usize>();
+        let ch = cluster_str.chars().find(|ch| !ch.is_digit(10)).unwrap();
+        let cluster = match count {
+            Ok(c) => Cluster::new(ch, c),
+            _ => Cluster::new(ch, 1),
         };
-
-        clusters.push(cluster)
+        clusters.push(cluster);
     }
 
     clusters.iter().fold("".to_string(), |s, cl| {
