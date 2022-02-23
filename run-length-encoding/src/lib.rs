@@ -15,7 +15,7 @@ impl Cluster {
 
     fn to_encoded_string(self) -> String {
         if self.count == 1 {
-            format!("{}", self.ch)
+            self.ch.to_string()
         } else {
             format!("{}{}", self.count, self.ch)
         }
@@ -71,13 +71,11 @@ pub fn decode(source: &str) -> String {
         source.split_inclusive(|ch| char::is_alphabetic(ch) || char::is_whitespace(ch));
 
     for cluster_str in cluster_str_vec {
+        let (num_part, letter_part): (String, String) =
+            cluster_str.chars().partition(|ch| ch.is_digit(10));
         // First see if there is a number
-        let count = cluster_str
-            .chars()
-            .filter(|ch| ch.is_digit(10))
-            .collect::<String>()
-            .parse::<usize>();
-        let ch = cluster_str.chars().find(|ch| !ch.is_digit(10)).unwrap();
+        let count = num_part.parse::<usize>();
+        let ch = letter_part.chars().next().unwrap();
         let cluster = match count {
             Ok(c) => Cluster::new(ch, c),
             _ => Cluster::new(ch, 1),
