@@ -91,10 +91,13 @@ impl BowlingGame {
                 score: PINS,
             });
 
+            // In the final frame a strike confers a bonus roll. Also, because
+            // we cannot advance to a new frame we have to setup the pins again.
             if frame.is_final {
                 frame.bonus_roll = true;
                 frame.pins_left = PINS;
             } else {
+                // In earlier frames we advance to the next frame on a strike
                 frame.pins_left = 0;
                 self.curr_frame += 1;
             }
@@ -133,8 +136,8 @@ impl BowlingGame {
         if self.complete {
             let mut score = 0;
 
-            // First count all of the rolls not in the final frame.
-            // These can have bonuses.
+            // First count all the rolls that are not in the final
+            // frame. These can have bonuses.
             for roll_window in self.rolls.windows(3) {
                 let cur = &roll_window[0];
                 let next = &roll_window[1];
@@ -151,7 +154,8 @@ impl BowlingGame {
                 }
             }
 
-            // This will add up the score from the final frame
+            // This will add up the score from the final frame, where there
+            // are no bonuses for strikes or spares
             score += self
                 .rolls
                 .iter()

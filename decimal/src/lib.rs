@@ -1,6 +1,7 @@
 use core::str::FromStr;
 use num_bigint::BigInt;
 use std::ops;
+use std::string::ToString;
 
 /// Type implementing arbitrary-precision decimal arithmetic
 #[derive(Debug, Eq, PartialEq, PartialOrd, Ord, Clone)]
@@ -8,6 +9,12 @@ pub struct Decimal {
     // implement your type here
     int_part: BigInt,
     frac_part: BigInt,
+}
+
+impl ToString for Decimal {
+    fn to_string(&self) -> String {
+        return format!("{}.{}", self.int_part, self.frac_part);
+    }
 }
 
 impl Decimal {
