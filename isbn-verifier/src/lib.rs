@@ -3,14 +3,19 @@ pub fn is_valid_isbn(isbn: &str) -> bool {
     if isbn.is_empty() {
         return false;
     }
-    let digits = isbn
+    let mut digits = isbn
         .chars()
         .filter_map(|ch| match ch {
             '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' => ch.to_digit(10),
-            'x' | 'X' => Some(10u32),
             _ => None,
         })
         .collect::<Vec<u32>>();
+    if isbn.ends_with('X') {
+        digits.push(10);
+    }
+    if digits.len() != 10 {
+        return false;
+    }
     do_isbn_checksum(&digits)
 }
 
