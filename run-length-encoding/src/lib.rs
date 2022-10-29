@@ -72,7 +72,7 @@ pub fn decode(source: &str) -> String {
 
     for cluster_str in cluster_str_vec {
         let (num_part, letter_part): (String, String) =
-            cluster_str.chars().partition(|ch| ch.is_digit(10));
+            cluster_str.chars().partition(|ch| ch.is_ascii_digit());
         // First see if there is a number
         let count = num_part.parse::<usize>();
         let ch = letter_part.chars().next().unwrap();

@@ -6,7 +6,7 @@ pub fn is_valid_isbn(isbn: &str) -> bool {
     let mut digits = isbn
         .chars()
         .filter_map(|ch| match ch {
-            '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' => ch.to_digit(10),
+            '0'..='9' => ch.to_digit(10),
             _ => None,
         })
         .collect::<Vec<u32>>();

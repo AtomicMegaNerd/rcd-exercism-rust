@@ -13,7 +13,7 @@ pub struct Decimal {
 
 impl ToString for Decimal {
     fn to_string(&self) -> String {
-        return format!("{}.{}", self.int_part, self.frac_part);
+        format!("{}.{}", self.int_part, self.frac_part)
     }
 }
 
@@ -27,6 +27,7 @@ impl Decimal {
 
     pub fn try_from(input: &str) -> Option<Decimal> {
         let mut parts = input.split('.');
+
         let int_part = BigInt::from_str(parts.next()?);
         let frac_part = BigInt::from_str(parts.next()?);
 
